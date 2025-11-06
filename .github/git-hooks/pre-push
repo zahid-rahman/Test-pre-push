@@ -1,40 +1,25 @@
 #!/bin/bash
-#
-# Git pre-push hook
-# Prevents pushing if your local branch is behind or diverged from the remote.
-# Safe for any branch (works with develop, main, feature, etc.)
-#
 
-set -e
-
-# Get the current branch name
 branch="$(git rev-parse --abbrev-ref HEAD)"
-remote="origin"
-remote_branch="$remote/$branch"
+remote_branch="origin/$branch"
 
-echo "🔍 Checking if '$branch' is up to date with '$remote_branch'..."
+# Fetch latest updates
+git fetch origin $branch >/dev/null 2>&1
 
-# Fetch the latest commits from remote (quietly)
-git fetch $remote $branch --quiet
-
-# Get the commit hashes
 LOCAL=$(git rev-parse $branch)
 REMOTE=$(git rev-parse $remote_branch)
 BASE=$(git merge-base $branch $remote_branch)
 
-# Compare commits
-if [ "$LOCAL" = "$REMOTE" ]; then
-    echo "✅ Your branch is up to date with $remote_branch."
+if [ $LOCAL = $REMOTE ]; then
+    echo "✅ Your branch is up to date with origin/$branch."
     exit 0
-elif [ "$LOCAL" = "$BASE" ]; then
-    echo "❌ Push rejected: your branch is behind $remote_branch."
-    echo "👉 Run 'git pull --rebase $remote $branch' or 'git pull --rebase' before pushing again."
+elif [ $LOCAL = $BASE ]; then
+    echo "❌ Your branch is behind origin/$branch. Please pull/rebase before pushing."
     exit 1
-elif [ "$REMOTE" = "$BASE" ]; then
-    echo "✅ Your branch is ahead of $remote_branch. Safe to push."
+elif [ $REMOTE = $BASE ]; then
+    echo "✅ Your branch is ahead of origin/$branch. Safe to push."
     exit 0
 else
-    echo "⚠️ Push rejected: your branch and $remote_branch have diverged."
-    echo "👉 Run 'git pull --rebase' and resolve conflicts before pushing."
+    echo "⚠️ Your branch and origin/$branch have diverged. Please pull with rebase first."
     exit 1
 fi
