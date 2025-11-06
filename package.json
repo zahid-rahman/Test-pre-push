@@ -1,0 +1,12 @@
+{
+  "name": "test-pre-push",
+  "version": "1.0.0",
+  "description": "My change",
+  "main": "index.js",
+  "scripts": {
+    "git-pre-push": "cp .github/git-hooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
