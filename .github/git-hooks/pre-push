@@ -1,25 +1,41 @@
 #!/bin/bash
+#
+# Git pre-push hook
+# Blocks push if local 'develop' is not up to date with 'origin/develop'.
+# Applies to ALL branches — ensures 'develop' is always the latest base.
+#
 
-branch="$(git rev-parse --abbrev-ref HEAD)"
-remote_branch="origin/$branch"
+set -e
 
-# Fetch latest updates
-git fetch origin $branch >/dev/null 2>&1
+BASE_BRANCH="develop"
+REMOTE="origin"
 
-LOCAL=$(git rev-parse $branch)
-REMOTE=$(git rev-parse $remote_branch)
-BASE=$(git merge-base $branch $remote_branch)
+echo "🔍 Checking if local '$BASE_BRANCH' is up to date with '$REMOTE/$BASE_BRANCH'..."
 
-if [ $LOCAL = $REMOTE ]; then
-    echo "✅ Your branch is up to date with origin/$branch."
-    exit 0
-elif [ $LOCAL = $BASE ]; then
-    echo "❌ Your branch is behind origin/$branch. Please pull/rebase before pushing."
-    exit 1
-elif [ $REMOTE = $BASE ]; then
-    echo "✅ Your branch is ahead of origin/$branch. Safe to push."
-    exit 0
-else
-    echo "⚠️ Your branch and origin/$branch have diverged. Please pull with rebase first."
+# Fetch the latest remote info quietly
+git fetch $REMOTE $BASE_BRANCH --quiet
+
+LOCAL=$(git rev-parse $BASE_BRANCH 2>/dev/null || echo "")
+REMOTE_HEAD=$(git rev-parse $REMOTE/$BASE_BRANCH 2>/dev/null || echo "")
+BASE=$(git merge-base $BASE_BRANCH $REMOTE/$BASE_BRANCH 2>/dev/null || echo "")
+
+# If 'develop' doesn't exist locally yet
+if [ -z "$LOCAL" ]; then
+    echo "⚠️ Local '$BASE_BRANCH' branch not found. Please fetch it first:"
+    echo "   git fetch $REMOTE $BASE_BRANCH && git checkout $BASE_BRANCH"
     exit 1
 fi
+
+# Compare commits
+if [ "$LOCAL" = "$REMOTE_HEAD" ]; then
+    echo "✅ Local '$BASE_BRANCH' is up to date with '$REMOTE/$BASE_BRANCH'."
+else
+    echo "❌ Push rejected: your local '$BASE_BRANCH' is not up to date with '$REMOTE/$BASE_BRANCH'."
+    echo "👉 Please run: git checkout $BASE_BRANCH && git pull --rebase $REMOTE $BASE_BRANCH"
+    echo "Then rebase your feature branch on top of the updated '$BASE_BRANCH' before pushing."
+    exit 1
+fi
+
+# If up-to-date, allow push to continue
+echo "✅ Proceeding with push..."
+exit 0
